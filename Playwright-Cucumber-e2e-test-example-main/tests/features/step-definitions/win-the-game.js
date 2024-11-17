@@ -1,49 +1,67 @@
+
 import { Given, When, Then } from '@cucumber/cucumber';
 import { expect } from 'chai';
 import { navigateTo, getWhereIAm, getMenuChoiceElement, checkIfDescriptionContainsString, cheatIfNeeded} from './helpers.js'
 
-Given('I am on the page {string}', async function (url) {
+//I should be given a beer by the bartender
+Given('that I have started the game by navigating to {string}', async function (url) {
   await this.gotoUrl(url);
-  // Sayfanın tamamen yüklendiğini doğrulamak için DOM elemanını bekle
+  // Important: wait for the relevant DOM element(s) to exist
+  // - we should choose to wait for an element we expect to only be in the DOM
+  //   with correct content/text to verify that the app has fully loaded
   await this.getByXPathWait('/descendant::*[@class="health"]//*[contains(text(), "50")]', 1000);
-  await this.getWait('.choices ul li:nth-child(2)', 1000); // Menü öğesinin yüklenmesini bekleyin
+  await this.getWait('.choices ul li:nth-child(2)', 1000);
 });
 
-Given('I moved to the location {string}', async function (to) {
+Given('that I navigated to the position {string}', async function (to) {
   await navigateTo(this, to);
-  await this.getWait('.location-info', 1000); 
 });
 
-Given(' my current location is {string}', async function (position) {
+Given('that my position is {string}', async function (position) {
   expect(await getWhereIAm(this)).to.equal(position);
+
 });
+
 
 When('I wait long enough for the description to contain the text {string}', async function (partOfDescription) {
+  // press wait repeatedly until the description contains a certain text
   while (!await checkIfDescriptionContainsString(this, partOfDescription, true)) {
-    await cheatIfNeeded(this); // Eğer sağlık düşükse, testin arıza yapmaması için
+    // cheat if the health is low, since each wait deteriorates the health
+    // and we don't want flaky tests (that fail every once in a while)
+    await cheatIfNeeded(this);
+    // press wait
     let waitButton = await getMenuChoiceElement(this, 'Wait');
-    await waitButton.click();  
-    await this.getWait('.description', 1000); 
+    await waitButton.click();
   }
 });
 
 Then('my hipster bag should contain {string}', async function (thing) {
-  await this.getWait('.bag-content', 1000);
+  // get all the text in the hipster bag element
   let textInBag = await this.getText(await this.get('.bag-content'));
+  // check if the string thing is part of the text
   expect(textInBag).to.contain(thing);
 });
+
+
+//I should be given a money by the group
 
 Then('click the button {string}', async function(button){
   let jamButton = await getMenuChoiceElement(this, button);
   await jamButton.click();
 });
 
-Then('money increases till {float}', async function(expectedMoney){
+Then('money inscreases till {float}', async function(expectedMoney){
   let moneyElement = await this.get('.money .val');
-  await this.getWait('.money .val', 1000); 
+  
+  // Get the text content of the element
   let moneyText = await moneyElement.textContent();
+
+  // Parse the text content to a float
   let moneyN = parseFloat(moneyText);
+
+  // Now check that the parsed value matches the expected value
   expect(moneyN).to.equal(expectedMoney);
+  console.log(moneyN, expectedMoney)
 });
 
 //Win the game
@@ -59,6 +77,6 @@ Then('click repeatedly button {string} until I win', async function (button) {
   }
 });
 
-Then('my current location should be{string}', async function (position) {
+Then('my position should be {string}', async function (position) {
   expect(await getWhereIAm(this)).to.equal(position);
 });
